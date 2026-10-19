@@ -23,6 +23,7 @@ agentkit run "Build a command-line calculator" --execute -o output/
 - [Development](#development)
 - [Known limitations](#known-limitations)
 - [Troubleshooting](#troubleshooting)
+- [License](#license)
 
 ## How it works
 
@@ -301,3 +302,7 @@ API keys hidden from generated code, and broken QA scripts not blamed on the imp
 | OpenAI calls fail after removing Groq | Delete the `OPENAI_BASE_URL` line entirely; don't leave it empty |
 | Code is cut off and QA reports a `SyntaxError` | Raise `LLM_MAX_TOKENS` |
 | QA rejects good code with a strict assertion | Read the test failure in the verdict, and make the requirement explicit in your request |
+
+## License
+
+[MIT](LICENSE)
