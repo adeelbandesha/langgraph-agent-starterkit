@@ -3,23 +3,29 @@ import logging
 from langchain_core.language_models import BaseChatModel
 from langchain_core.messages import HumanMessage, SystemMessage
 
+from src.config import TARGET_PYTHON
 from src.errors import AgentExecutionError
 from src.state import AgentNode, CodeArtifact, PipelineState, QAReport, Specification
 from src.utils.llm import invoke_structured
 
 logger = logging.getLogger(__name__)
 
-SYSTEM_PROMPT = """\
+SYSTEM_PROMPT = f"""\
 You are a senior Python engineer. Implement the specification as one complete, runnable \
-Python 3.11+ module.
+module for Python {TARGET_PYTHON}.
 
+- Never use APIs that are deprecated or removed in Python {TARGET_PYTHON}.
 - Use strict type hints, small focused functions and descriptive names.
-- Do not write comments that restate the code; add a docstring only where intent is not obvious.
-- Use the logging module for diagnostics; reserve print for intended user-facing output.
+- Do not write comments that restate the code, section-banner comments, or placeholder classes \
+and parameters kept "for extensibility". Add a docstring only where intent is not obvious.
+- Use the logging module for diagnostics and configure it inside main(), never at import time. \
+Reserve print for intended user-facing output.
 - Raise specific exceptions with clear messages; never silently swallow errors.
+- Bound any work driven by user input, so hostile input cannot hang the program or exhaust memory.
 - If the module is a program, expose main() behind an if __name__ == "__main__" guard.
 - Prefer the standard library unless the specification says otherwise.
-- When QA feedback is present, fix every listed issue while keeping working behaviour intact.
+- When QA feedback is present, fix every listed issue while keeping working behaviour intact. \
+Output from a failed test run shows what the code really did, so trust it over your reasoning.
 
 Always return the entire file, never a diff or a partial snippet."""
 
@@ -34,7 +40,10 @@ def _build_request(
         sections.append(
             f"## Previous Implementation ({previous.filename})\n\n```python\n{previous.code}\n```"
         )
-        sections.append(f"## QA Feedback To Address\n\n{report.to_markdown()}")
+        # Passing checks are dropped to keep retry prompts inside small per-request token limits.
+        sections.append(
+            f"## QA Feedback To Address\n\n{report.to_markdown(include_passed_checks=False)}"
+        )
     return "\n\n".join(sections)
 
 

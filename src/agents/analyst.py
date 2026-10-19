@@ -3,18 +3,21 @@ import logging
 from langchain_core.language_models import BaseChatModel
 from langchain_core.messages import HumanMessage, SystemMessage
 
+from src.config import TARGET_PYTHON
 from src.state import AgentNode, PipelineState, Specification
 from src.utils.llm import invoke_structured
 
 logger = logging.getLogger(__name__)
 
-SYSTEM_PROMPT = """\
+SYSTEM_PROMPT = f"""\
 You are a senior requirements analyst. Turn the user's feature request into a precise \
-functional specification for a single, self-contained Python 3.11+ module.
+functional specification for a single, self-contained Python {TARGET_PYTHON} module.
 
 - Capture what was asked for; do not invent extra features.
 - Resolve ambiguity with sensible defaults and record each one under assumptions.
 - Every functional requirement and acceptance criterion must be objectively testable.
+- Examples in the interface must agree exactly with the acceptance criteria and requirements.
+- Cover hostile and oversized input in the edge cases, with the expected behaviour for each.
 - Prefer the standard library unless the request clearly needs a third-party package.
 - Define the public interface concretely: exact CLI usage or function and class signatures."""
 

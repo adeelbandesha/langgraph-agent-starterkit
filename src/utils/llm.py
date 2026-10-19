@@ -20,7 +20,7 @@ def create_chat_model(settings: Settings) -> BaseChatModel:
     options: dict[str, Any] = {
         "model": settings.resolved_model,
         "max_tokens": settings.max_tokens,
-        "max_retries": 2,
+        "max_retries": settings.max_retries,
     }
     # Only send temperature when configured: some models reject sampling parameters outright.
     if settings.temperature is not None:

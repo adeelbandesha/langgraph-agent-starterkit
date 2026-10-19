@@ -87,6 +87,14 @@ class QAReport(BaseModel):
         default_factory=list,
         description="Concrete, actionable defects for the implementer. Empty when approved.",
     )
+    test_script: str = Field(
+        default="",
+        description=(
+            "A standalone Python script that runs every check against the module using plain "
+            "assert statements and exits non-zero on the first failure. Use real line breaks, "
+            "not \\n escape sequences."
+        ),
+    )
 
     @property
     def passed(self) -> bool:
@@ -96,12 +104,13 @@ class QAReport(BaseModel):
     def passed_check_count(self) -> int:
         return sum(check.passed for check in self.checks)
 
-    def to_markdown(self) -> str:
+    def to_markdown(self, include_passed_checks: bool = True) -> str:
         verdict = "APPROVED" if self.passed else "CHANGES REQUESTED"
+        checks = [check for check in self.checks if include_passed_checks or not check.passed]
         check_lines = [
             f"- [{'x' if check.passed else ' '}] **{check.name}**: {check.scenario} "
             f"-> expected {check.expected}" + (f" (observed: {check.details})" if check.details else "")
-            for check in self.checks
+            for check in checks
         ]
         sections = [
             f"# QA Report: {verdict}",

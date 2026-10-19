@@ -1,4 +1,5 @@
 import os
+import sys
 from typing import Literal
 
 from dotenv import find_dotenv, load_dotenv
@@ -7,6 +8,8 @@ from pydantic import BaseModel, Field, ValidationError
 from src.errors import ConfigurationError
 
 Provider = Literal["anthropic", "openai"]
+
+TARGET_PYTHON = f"{sys.version_info.major}.{sys.version_info.minor}"
 
 DEFAULT_MODELS: dict[Provider, str] = {
     "anthropic": "claude-sonnet-5-5",
@@ -23,6 +26,7 @@ ENVIRONMENT_VARIABLES: dict[str, str] = {
     "model": "LLM_MODEL",
     "temperature": "LLM_TEMPERATURE",
     "max_tokens": "LLM_MAX_TOKENS",
+    "max_retries": "LLM_MAX_RETRIES",
     "max_qa_iterations": "MAX_QA_ITERATIONS",
     "log_level": "LOG_LEVEL",
 }
@@ -33,6 +37,7 @@ class Settings(BaseModel):
     model: str | None = None
     temperature: float | None = Field(default=None, ge=0.0, le=2.0)
     max_tokens: int = Field(default=8192, gt=0)
+    max_retries: int = Field(default=6, ge=0, le=20)
     max_qa_iterations: int = Field(default=3, ge=1, le=10)
     log_level: Literal["DEBUG", "INFO", "WARNING", "ERROR"] = "INFO"
 

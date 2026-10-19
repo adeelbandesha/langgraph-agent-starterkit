@@ -6,7 +6,7 @@ from langchain_core.runnables import RunnableLambda
 from pydantic import BaseModel
 
 from src.errors import AgentExecutionError
-from src.main import build_graph
+from src.main import build_graph, execute_pipeline
 from src.state import CodeArtifact, QAReport, Specification, ValidationCheck
 
 SPECIFICATION = Specification(
@@ -74,6 +74,23 @@ def test_approval_with_failing_check_does_not_pass() -> None:
     contradictory = REJECTION.model_copy(update={"approved": True})
 
     assert not contradictory.passed
+
+
+def test_late_failure_keeps_the_last_reviewed_round() -> None:
+    graph = build_graph(ScriptedModel(SPECIFICATION, BUGGY_CODE, REJECTION), 3)  # type: ignore[arg-type]
+
+    state = execute_pipeline(graph, "add numbers", 3)
+
+    assert state["iteration"] == 1
+    assert state["code"] == BUGGY_CODE
+    assert state["qa_report"] == REJECTION
+
+
+def test_failure_before_any_review_is_raised() -> None:
+    graph = build_graph(ScriptedModel(SPECIFICATION), 3)  # type: ignore[arg-type]
+
+    with pytest.raises(AgentExecutionError, match="implementer"):
+        execute_pipeline(graph, "add numbers", 3)
 
 
 def test_model_failure_is_wrapped_in_agent_error() -> None:

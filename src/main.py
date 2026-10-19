@@ -14,9 +14,10 @@ from rich.syntax import Syntax
 from rich.table import Table
 
 from src.agents import build_analyst, build_implementer, build_qa
-from src.config import Settings, load_settings
-from src.errors import AgentKitError, OutputWriteError
+from src.config import load_settings
+from src.errors import AgentExecutionError, AgentKitError, OutputWriteError
 from src.state import PipelineState
+from src.utils.executor import qa_script_filename
 from src.utils.llm import create_chat_model
 from src.utils.logger import configure_logging, stderr_console
 
@@ -26,7 +27,9 @@ app = typer.Typer(add_completion=False, no_args_is_help=True, rich_markup_mode="
 stdout_console = Console()
 
 
-def build_graph(llm: BaseChatModel, max_iterations: int) -> CompiledStateGraph:
+def build_graph(
+    llm: BaseChatModel, max_iterations: int, execute_checks: bool = False
+) -> CompiledStateGraph:
     """Wire analyst -> implementer -> qa, looping back to the implementer until QA approves."""
 
     def route_after_qa(state: PipelineState) -> str:
@@ -40,7 +43,7 @@ def build_graph(llm: BaseChatModel, max_iterations: int) -> CompiledStateGraph:
     graph = StateGraph(PipelineState)
     graph.add_node("analyst", build_analyst(llm))
     graph.add_node("implementer", build_implementer(llm))
-    graph.add_node("qa", build_qa(llm))
+    graph.add_node("qa", build_qa(llm, execute_checks))
     graph.add_edge(START, "analyst")
     graph.add_edge("analyst", "implementer")
     graph.add_edge("implementer", "qa")
@@ -60,20 +63,33 @@ def describe_progress(state: PipelineState) -> str:
             return "Implementer is addressing QA feedback..."
 
 
-def execute_pipeline(request: str, settings: Settings) -> PipelineState:
-    graph = build_graph(create_chat_model(settings), settings.max_qa_iterations)
+def execute_pipeline(graph: CompiledStateGraph, request: str, max_iterations: int) -> PipelineState:
+    """Stream the graph to completion, falling back to the last reviewed round if a later LLM call fails."""
     state: PipelineState = {"prompt": request, "iteration": 0}
+    last_reviewed: PipelineState | None = None
     # Each QA round costs two graph steps; leave headroom so long loops never hit the default limit.
-    config = {"recursion_limit": 2 * settings.max_qa_iterations + 5}
+    config = {"recursion_limit": 2 * max_iterations + 5}
 
     with stderr_console.status(describe_progress(state), spinner="dots") as status:
-        for snapshot in graph.stream(state, config=config, stream_mode="values"):
-            state = cast(PipelineState, snapshot)
-            status.update(describe_progress(state))
+        try:
+            for snapshot in graph.stream(state, config=config, stream_mode="values"):
+                state = cast(PipelineState, snapshot)
+                if state.get("active_node") == "qa":
+                    last_reviewed = state
+                status.update(describe_progress(state))
+        except AgentExecutionError as exc:
+            if last_reviewed is None:
+                raise
+            logger.error("%s", exc)
+            logger.warning(
+                "Keeping the results of iteration %d, the last one QA reviewed",
+                last_reviewed["iteration"],
+            )
+            return last_reviewed
     return state
 
 
-def render_results(state: PipelineState) -> None:
+def render_results(state: PipelineState, execute_checks: bool) -> None:
     specification, artifact, report = state["specification"], state["code"], state["qa_report"]
 
     stdout_console.print(
@@ -104,11 +120,13 @@ def render_results(state: PipelineState) -> None:
 
     verdict_style = "green" if report.passed else "red"
     verdict = "APPROVED" if report.passed else "CHANGES REQUESTED"
+    executed = execute_checks and bool(report.test_script.strip())
+    method = "test script executed" if executed else "review only, not executed"
     body = escape(report.summary)
     if report.issues:
         body += "\n\n" + "\n".join(f"- {escape(issue)}" for issue in report.issues)
     stdout_console.print(
-        Panel(body, title=f"QA Verdict: {verdict}", border_style=verdict_style)
+        Panel(body, title=f"QA Verdict: {verdict} ({method})", border_style=verdict_style)
     )
 
 
@@ -119,6 +137,8 @@ def save_artifacts(state: PipelineState, directory: Path) -> list[Path]:
         directory / artifact.filename: artifact.code,
         directory / "QA_REPORT.md": state["qa_report"].to_markdown(),
     }
+    if state["qa_report"].test_script.strip():
+        files[directory / qa_script_filename(artifact)] = state["qa_report"].test_script
     try:
         directory.mkdir(parents=True, exist_ok=True)
         for path, content in files.items():
@@ -142,9 +162,17 @@ def run(
             "--output-dir",
             "-o",
             file_okay=False,
-            help="Write SPEC.md, the generated module and QA_REPORT.md to this directory.",
+            help="Write SPEC.md, the generated module, its QA test script and QA_REPORT.md to this directory.",
         ),
     ] = None,
+    execute: Annotated[
+        bool,
+        typer.Option(
+            "--execute",
+            "-x",
+            help="Run QA's test script against the generated code. Runs model-written code locally.",
+        ),
+    ] = False,
     verbose: Annotated[
         bool, typer.Option("--verbose", "-v", help="Enable debug logging.")
     ] = False,
@@ -157,8 +185,9 @@ def run(
         settings = load_settings()
         configure_logging(logging.DEBUG if verbose else settings.log_level)
         logger.info("Using %s model %s", settings.provider, settings.resolved_model)
-        state = execute_pipeline(request.strip(), settings)
-        render_results(state)
+        graph = build_graph(create_chat_model(settings), settings.max_qa_iterations, execute)
+        state = execute_pipeline(graph, request.strip(), settings.max_qa_iterations)
+        render_results(state, execute)
         if output_dir is not None:
             for path in save_artifacts(state, output_dir):
                 stdout_console.print(f"[dim]Saved[/] {escape(str(path))}")

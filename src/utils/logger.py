@@ -6,7 +6,7 @@ from rich.logging import RichHandler
 # Logs and the progress spinner share stderr so they never tear each other, and stdout stays pipeable.
 stderr_console = Console(stderr=True)
 
-NOISY_LOGGERS = ("httpx", "httpcore", "anthropic", "openai", "urllib3")
+NOISY_LOGGERS = ("httpx", "httpx2", "httpcore", "anthropic", "openai", "urllib3")
 
 
 def configure_logging(level: str | int = logging.INFO) -> None:
