@@ -1,0 +1,34 @@
+name: Bug report
+description: Something does not work as documented
+labels: [bug]
+body:
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened
+      description: What you expected, and what happened instead.
+    validations:
+      required: true
+  - type: textarea
+    id: repro
+    attributes:
+      label: Steps to reproduce
+      description: The exact command, for example `agentkit run "..." --execute`.
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Output or traceback
+      description: Remove API keys before pasting.
+      render: text
+  - type: input
+    id: provider
+    attributes:
+      label: Provider and model
+      placeholder: anthropic / claude-sonnet-5-5, or openai via Groq / openai/gpt-oss-120b
+  - type: input
+    id: env
+    attributes:
+      label: Python version and OS
+      placeholder: Python 3.12, Ubuntu 24.04
