@@ -51,7 +51,9 @@ class Specification(BaseModel):
 
 
 class CodeArtifact(BaseModel):
-    filename: str = Field(description="Module filename in snake_case ending in .py, e.g. calculator.py.")
+    filename: str = Field(
+        description="Module filename in snake_case ending in .py, e.g. calculator.py."
+    )
     code: str = Field(description="The complete, runnable Python source of the module.")
     notes: str = Field(
         default="", description="Key design decisions, or what changed in response to QA feedback."
@@ -109,7 +111,8 @@ class QAReport(BaseModel):
         checks = [check for check in self.checks if include_passed_checks or not check.passed]
         check_lines = [
             f"- [{'x' if check.passed else ' '}] **{check.name}**: {check.scenario} "
-            f"-> expected {check.expected}" + (f" (observed: {check.details})" if check.details else "")
+            f"-> expected {check.expected}"
+            + (f" (observed: {check.details})" if check.details else "")
             for check in checks
         ]
         sections = [

@@ -57,7 +57,9 @@ def _build_request(specification: Specification, artifact: CodeArtifact) -> str:
 
 
 def _verify_by_execution(report: QAReport, artifact: CodeArtifact) -> QAReport:
-    problem = find_syntax_error(report.test_script) if report.test_script.strip() else "none returned"
+    problem = (
+        find_syntax_error(report.test_script) if report.test_script.strip() else "none returned"
+    )
     if problem is not None:
         # A broken test script is QA's fault, so it must not count against the implementer.
         logger.warning("QA test script is unusable (%s); keeping the review-only verdict", problem)
@@ -94,7 +96,10 @@ def build_qa(llm: BaseChatModel, execute_checks: bool = False) -> AgentNode:
             report = invoke_structured(
                 llm,
                 QAReport,
-                [SystemMessage(SYSTEM_PROMPT), HumanMessage(_build_request(specification, artifact))],
+                [
+                    SystemMessage(SYSTEM_PROMPT),
+                    HumanMessage(_build_request(specification, artifact)),
+                ],
                 agent="qa",
             )
             if execute_checks:

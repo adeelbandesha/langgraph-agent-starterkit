@@ -17,6 +17,8 @@ python -m venv .venv
 source .venv/bin/activate              # Windows: .venv\Scripts\activate
 pip install -e ".[dev]"
 pytest
+ruff check src tests
+ruff format src tests
 ```
 
 The tests run offline with no API key: a scripted stand-in replaces the LLM.
@@ -24,7 +26,8 @@ The tests run offline with no API key: a scripted stand-in replaces the LLM.
 ## Pull requests
 
 1. Branch from `main` and keep each PR to one change.
-2. Add or update a test for any behavior you change, and make sure `pytest` passes.
+2. Add or update a test for any behavior you change, and make sure `pytest` and
+   `ruff check src tests` pass. Format with `ruff format src tests`.
 3. Update the README when you change configuration, the CLI or the graph.
 4. Never commit `.env` or an API key.
 5. Fill in the pull request template; CI must pass before review.

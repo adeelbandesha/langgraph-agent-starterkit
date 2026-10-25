@@ -8,7 +8,7 @@
 
 ## Checklist
 
-- [ ] `pytest` passes locally
+- [ ] `pytest`, `ruff check` and `ruff format --check` pass locally
 - [ ] Tests added or updated for changed behavior
 - [ ] README updated if configuration, CLI or graph changed
 - [ ] No secrets or `.env` committed
