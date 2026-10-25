@@ -8,7 +8,9 @@ from src.state import CodeArtifact, QAReport
 from src.utils.executor import run_test_script
 from tests.test_pipeline import APPROVAL, FIXED_CODE, SPECIFICATION, ScriptedModel
 
-ADDER = CodeArtifact(filename="adder.py", code="def add(a: int, b: int) -> int:\n    return a - b\n")
+ADDER = CodeArtifact(
+    filename="adder.py", code="def add(a: int, b: int) -> int:\n    return a - b\n"
+)
 CHECK_ADDER = "import adder\nassert adder.add(2, 3) == 5, adder.add(2, 3)\n"
 
 

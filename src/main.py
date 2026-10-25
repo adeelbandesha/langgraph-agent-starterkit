@@ -36,7 +36,9 @@ def build_graph(
         if state["qa_report"].passed:
             return END
         if state["iteration"] >= max_iterations:
-            logger.warning("QA still rejects the code after %d iterations; stopping", max_iterations)
+            logger.warning(
+                "QA still rejects the code after %d iterations; stopping", max_iterations
+            )
             return END
         return "implementer"
 
@@ -173,9 +175,7 @@ def run(
             help="Run QA's test script against the generated code. Runs model-written code locally.",
         ),
     ] = False,
-    verbose: Annotated[
-        bool, typer.Option("--verbose", "-v", help="Enable debug logging.")
-    ] = False,
+    verbose: Annotated[bool, typer.Option("--verbose", "-v", help="Enable debug logging.")] = False,
 ) -> None:
     """Turn a feature request into a specification, an implementation and a QA verdict."""
     if not request.strip():

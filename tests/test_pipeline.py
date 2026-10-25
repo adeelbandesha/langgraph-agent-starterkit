@@ -16,8 +16,12 @@ SPECIFICATION = Specification(
     interface="`add(a: int, b: int) -> int`",
     acceptance_criteria=["add(2, 3) == 5"],
 )
-BUGGY_CODE = CodeArtifact(filename="adder.py", code="def add(a: int, b: int) -> int:\n    return a - b\n")
-FIXED_CODE = CodeArtifact(filename="adder.py", code="def add(a: int, b: int) -> int:\n    return a + b\n")
+BUGGY_CODE = CodeArtifact(
+    filename="adder.py", code="def add(a: int, b: int) -> int:\n    return a - b\n"
+)
+FIXED_CODE = CodeArtifact(
+    filename="adder.py", code="def add(a: int, b: int) -> int:\n    return a + b\n"
+)
 REJECTION = QAReport(
     approved=False,
     summary="Subtracts instead of adding.",

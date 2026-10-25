@@ -267,6 +267,8 @@ OpenAI-compatible API, setting `OPENAI_BASE_URL` is enough.
 ```bash
 pip install -e ".[dev]"
 pytest
+ruff check src tests          # lint
+ruff format src tests         # format
 ```
 
 The 18 tests run offline in a few seconds, with no API key. A scripted stand-in replaces
